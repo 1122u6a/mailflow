@@ -339,6 +339,11 @@ describe('sanitizeEmail — dark-mode CSS', () => {
     expect(out).toBe('<style>a[href]{color:red}.k{l:m}</style>');
   });
 
+  it('removes filter: invert() up to the end of its rule, not into the rules after it', () => {
+    const out = sanitizeEmail('<style>img{filter:invert(1)}.keep{color:red;margin:0}.also{x:y}</style>');
+    expect(out).toBe('<style>img{}.keep{color:red;margin:0}.also{x:y}</style>');
+  });
+
   it('removes color-scheme declarations and filter: invert()', () => {
     const out = sanitizeEmail('<style>:root{color-scheme:light dark}.r{filter:invert(1) hue-rotate(180deg);s:t}.q{filter:blur(2px)}</style>');
     expect(out).toBe('<style>:root{}.r{s:t}.q{filter:blur(2px)}</style>');

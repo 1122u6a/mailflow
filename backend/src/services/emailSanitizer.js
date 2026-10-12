@@ -312,9 +312,14 @@ function stripInvertFilters(css) {
   while ((m = invertRe.exec(css)) !== null) {
     const paren = css.indexOf(')', invertRe.lastIndex);
     if (paren === -1) break;
+    // The declaration ends at its ';' or at the '}' closing its rule, whichever comes first; the
+    // '}' stays. Looking only for ';' ran across the end of a rule written without one
+    // (img{filter:invert(1)}) and deleted the rules after it up to the next ';'.
     const semi = css.indexOf(';', paren + 1);
+    const brace = css.indexOf('}', paren + 1);
     out += css.slice(pos, m.index);
-    pos = semi === -1 ? css.length : semi + 1;
+    if (brace !== -1 && (semi === -1 || brace < semi)) pos = brace;
+    else pos = semi === -1 ? css.length : semi + 1;
     invertRe.lastIndex = pos;
   }
   return out + css.slice(pos);
