@@ -21,6 +21,7 @@ import ReadingPane from './ReadingPane.jsx';
 import NotificationToasts from './NotificationToasts.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import { usePluginSlot, PluginRuntime } from '../plugins/PluginSlot.jsx';
+import { takePendingDeepLink, watchPendingDeepLink } from '../utils/pendingDeepLink.js';
 
 const ContactsPage = lazy(() => import('./ContactsPage.jsx'));
 const WindowLayer  = lazy(() => import('./WindowLayer.jsx'));
@@ -28,34 +29,6 @@ const WindowLayer  = lazy(() => import('./WindowLayer.jsx'));
 const ComposeModal = lazy(() => import('./ComposeModal.jsx'));
 const AdminPanel   = lazy(() => import('./AdminPanel.jsx'));
 const ElectronNotificationBridge = lazy(() => import('./ElectronNotificationBridge.jsx'));
-
-// Read + atomically clear the deep-link the service worker persisted on a
-// notification tap (shared IndexedDB store 'mailflow-nav'). Fully guarded so any
-// storage error resolves to null instead of throwing.
-function takePendingDeepLink() {
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-    try {
-      const open = indexedDB.open('mailflow-nav', 1);
-      open.onupgradeneeded = () => { try { open.result.createObjectStore('kv'); } catch { /* store already exists */ } };
-      open.onerror = () => done(null);
-      open.onblocked = () => done(null);
-      open.onsuccess = () => {
-        try {
-          const db = open.result;
-          const tx = db.transaction('kv', 'readwrite');
-          const store = tx.objectStore('kv');
-          const getReq = store.get('pending_deeplink');
-          getReq.onsuccess = () => { if (getReq.result != null) store.delete('pending_deeplink'); };
-          tx.oncomplete = () => { const v = getReq.result ?? null; db.close(); done(v); };
-          tx.onerror = () => { db.close(); done(null); };
-          tx.onabort = () => { db.close(); done(null); };
-        } catch { done(null); }
-      };
-    } catch { done(null); }
-  });
-}
 
 const lazyFallback = (
   <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -327,15 +300,15 @@ export default function MailApp() {
   // Consume the deep-link the SW persisted on a notification tap: read+clear it,
   // then open the message. IndexedDB is the reliable channel on iOS (postMessage can
   // be missed on a focus-with-reload, openWindow's URL is ignored on cold launch).
-  const consumePendingDeepLink = useCallback(() => {
-    takePendingDeepLink().then((url) => {
-      if (!url) return;
-      try {
-        const id = new URL(url, window.location.origin).searchParams.get('m');
-        if (id) openDeepLinkMessage(id);
-      } catch { /* ignore a malformed persisted deep-link */ }
-    });
+  const openPendingDeepLink = useCallback((url) => {
+    try {
+      const id = new URL(url, window.location.origin).searchParams.get('m');
+      if (id) openDeepLinkMessage(id);
+    } catch { /* ignore a malformed persisted deep-link */ }
   }, [openDeepLinkMessage]);
+  const consumePendingDeepLink = useCallback(() => {
+    takePendingDeepLink().then((url) => { if (url) openPendingDeepLink(url); });
+  }, [openPendingDeepLink]);
 
   // On load: open a deep-linked message from ?m= (Chromium honors openWindow) or a
   // stored id, plus any target the SW persisted for a notification tap.
@@ -351,10 +324,17 @@ export default function MailApp() {
   }, [openDeepLinkMessage, consumePendingDeepLink]);
 
   // A notification tap that returns to a backgrounded app (the achievable iOS case)
-  // fires visibilitychange; the SW also nudges via postMessage. Both just consume the
-  // persisted target — read+clear is atomic, so whichever runs first wins.
+  // fires visibilitychange; the SW also nudges via postMessage. Both consume the
+  // persisted target — read+clear is atomic, so whichever runs first wins. iOS can bring
+  // the app forward before the SW has stored the target, so coming to the front keeps
+  // checking for a few seconds (watchPendingDeepLink, #589).
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') consumePendingDeepLink(); };
+    let stopWatch = null;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      stopWatch?.();
+      stopWatch = watchPendingDeepLink({ open: openPendingDeepLink });
+    };
     document.addEventListener('visibilitychange', onVisible);
     let onSwMessage;
     if ('serviceWorker' in navigator) {
@@ -364,10 +344,11 @@ export default function MailApp() {
       navigator.serviceWorker.addEventListener('message', onSwMessage);
     }
     return () => {
+      stopWatch?.();
       document.removeEventListener('visibilitychange', onVisible);
       if (onSwMessage) navigator.serviceWorker.removeEventListener('message', onSwMessage);
     };
-  }, [consumePendingDeepLink]);
+  }, [consumePendingDeepLink, openPendingDeepLink]);
 
   // PWA mailto: handler (manifest protocol_handlers → /?mailto=<encoded mailto: URL>).
   // Parse the mailto and open a pre-filled compose window. Runs once on mount; a no-op
