@@ -947,7 +947,11 @@
       "trustedAuthservDetected": "Visto nos seus e-mails recentes (clique para usar):",
       "trustedAuthservDetectedNone": "Sem dados ainda — as mensagens são inspecionadas assim que o antispam for ativado para esta conta.",
       "trustedAuthservWarn": "Confie apenas em um ID que você reconheça como o servidor de recebimento do seu provedor de e-mail.",
-      "enabledGlobally": "Ativado globalmente"
+      "enabledGlobally": "Ativado globalmente",
+      "authorizationCodeHint": "Primeiro ative IMAP/SMTP no webmail e digite aqui o código de autorização do cliente, não a senha do webmail.",
+      "enterpriseHint": "Confirme com o administrador da empresa que IMAP/SMTP está ativado. Use a senha do cliente ou o código exigido pela organização.",
+      "appPasswordHint": "Crie uma senha de aplicativo nas configurações de segurança da conta e digite-a aqui. As políticas da conta podem restringir o acesso.",
+      "customConnectionHint": "Digite as configurações IMAP e SMTP do provedor. Para Outlook ou Microsoft 365, use a opção de conexão da Microsoft."
     },
     "folderMappings": {
       "title": "Mapeamento de pastas",

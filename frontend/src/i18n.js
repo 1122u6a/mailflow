@@ -30,6 +30,7 @@ const resources = {
 const browserLanguages = typeof navigator === 'undefined' ? []
   : (navigator.languages?.length ? navigator.languages : [navigator.language]);
 export const initialLanguage = localStorage.getItem('mailflow_language')
+  || (Object.hasOwn(resources, import.meta.env?.VITE_DEFAULT_LANGUAGE) ? import.meta.env.VITE_DEFAULT_LANGUAGE : null)
   || detectLanguage(browserLanguages, Object.keys(resources));
 
 i18n

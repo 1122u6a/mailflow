@@ -4,7 +4,7 @@ import { api } from '../utils/api.js';
 import { mergeCountSnapshots, adjustCountPending, expireCountPending, settleCountPending, displayCountSnapshot, mergeFolderSnapshots } from '../utils/countSnapshots.js';
 import { resolveSelectedAccount, pruneFolders } from '../utils/accountScope.js';
 import { aiRuns } from '../utils/aiRunRegistry.js';
-import { applyTheme, applyCustomCss, getInitialTheme } from '../themes.js';
+import { THEMES, applyTheme, applyCustomCss, getInitialTheme } from '../themes.js';
 import { applyFontSet, applyFontSize, effectiveFontSet, isRetroFont, THEME_FONT } from '../fonts.js';
 import { applyLayout, normalizeLayout } from '../layouts.js';
 import { DEFAULT_AI_ACTIONS } from '../aiActions.js';
@@ -792,7 +792,9 @@ export const useStore = create((set, get) => ({
   setLoadingThread: (id) => set({ loadingThread: id }),
 
   // Theme
-  theme: localStorage.getItem('mailflow_theme') || getInitialTheme(),
+  theme: localStorage.getItem('mailflow_theme')
+    || (Object.hasOwn(THEMES, import.meta.env?.VITE_DEFAULT_THEME) ? import.meta.env.VITE_DEFAULT_THEME : null)
+    || getInitialTheme(),
   setTheme: (theme) => {
     localStorage.setItem('mailflow_theme', theme);
     set({ theme });

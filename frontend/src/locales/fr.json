@@ -947,7 +947,11 @@
       "trustedAuthservDetected": "Vus dans vos messages récents (cliquez pour utiliser) :",
       "trustedAuthservDetectedNone": "Pas encore de données : les messages sont analysés lorsque l'antispam est actif pour ce compte.",
       "trustedAuthservWarn": "Ne faites confiance qu'à un ID que vous reconnaissez comme le serveur de réception de votre fournisseur.",
-      "enabledGlobally": "Activé globalement"
+      "enabledGlobally": "Activé globalement",
+      "authorizationCodeHint": "Activez d’abord IMAP/SMTP dans votre webmail, puis saisissez le code d’autorisation du client, et non votre mot de passe webmail.",
+      "enterpriseHint": "Demandez à votre administrateur d’activer IMAP/SMTP. Utilisez le mot de passe client ou le code d’autorisation exigé par votre entreprise.",
+      "appPasswordHint": "Créez un mot de passe d’application dans les paramètres de sécurité de votre compte, puis saisissez-le ici. Les règles du compte peuvent limiter l’accès.",
+      "customConnectionHint": "Saisissez les paramètres IMAP et SMTP de votre fournisseur. Pour Outlook ou Microsoft 365, utilisez la connexion Microsoft."
     },
     "folderMappings": {
       "title": "Mappage des dossiers",

@@ -67,11 +67,19 @@ jobs:
 
       - name: Build
         working-directory: frontend
+        env:
+          VITE_DEFAULT_LANGUAGE: zhCN
+          VITE_DEFAULT_THEME: light
         run: npm run build
 
       - name: Test
         working-directory: frontend
         run: npm test
+
+      - name: Team deployment configuration tests
+        run: |
+          node --test deploy/configure.test.mjs
+          bash -n deploy/first-run.sh
 
       - name: Audit
         working-directory: frontend
