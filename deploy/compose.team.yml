@@ -1,0 +1,6 @@
+services:
+  frontend:
+    build:
+      args:
+        VITE_DEFAULT_LANGUAGE: zhCN
+        VITE_DEFAULT_THEME: light

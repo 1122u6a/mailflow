@@ -963,7 +963,11 @@
       "trustedAuthservDetected": "Widziane w ostatnich wiadomościach (kliknij, aby użyć):",
       "trustedAuthservDetectedNone": "Brak danych — wiadomości są analizowane, gdy antyspam jest włączony dla tego konta.",
       "trustedAuthservWarn": "Ufaj tylko identyfikatorowi, który rozpoznajesz jako serwer odbierający Twojego dostawcy.",
-      "enabledGlobally": "Włączone globalnie"
+      "enabledGlobally": "Włączone globalnie",
+      "authorizationCodeHint": "Najpierw włącz IMAP/SMTP w poczcie internetowej, a następnie wpisz kod autoryzacji klienta zamiast hasła do poczty.",
+      "enterpriseHint": "Potwierdź u administratora firmy, że IMAP/SMTP jest włączone. Użyj hasła klienta lub kodu autoryzacji wymaganego przez organizację.",
+      "appPasswordHint": "Utwórz hasło aplikacji w ustawieniach bezpieczeństwa konta pocztowego i wpisz je tutaj. Zasady konta mogą ograniczać dostęp.",
+      "customConnectionHint": "Wprowadź ustawienia IMAP i SMTP dostawcy. Dla Outlook lub Microsoft 365 użyj opcji połączenia Microsoft."
     },
     "folderMappings": {
       "title": "Mapowania folderów",

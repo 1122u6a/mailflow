@@ -6,6 +6,7 @@ import { PluginSlot } from '../plugins/PluginSlot.jsx';
 import { newAiAction, AI_ACTION_LIMITS } from '../aiActions.js';
 import { useMobile } from '../hooks/useMobile.js';
 import { api } from '../utils/api.js';
+import { MAIL_PRESETS as PRESETS, applyMailPreset, detectMailPreset, updateAccountEmail } from '../utils/mailProviders.js';
 import { spamApi } from '../utils/spamApi.js';
 import { copyToClipboard } from '../utils/clipboard.js';
 import { isValidFromValue } from '../utils/defaultSender.js';
@@ -67,14 +68,6 @@ const COLORS = [
   '#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#14b8a6',
 ];
 
-// ─── IMAP presets ─────────────────────────────────────────────────────────────
-const PRESETS = {
-  gmail:   { label: 'Gmail',   imap_host: 'imap.gmail.com',        imap_port: 993, smtp_host: 'smtp.gmail.com',        smtp_port: 587 },
-  yahoo:   { label: 'Yahoo',   imap_host: 'imap.mail.yahoo.com',   imap_port: 993, smtp_host: 'smtp.mail.yahoo.com',   smtp_port: 587 },
-  icloud:  { label: 'iCloud',  imap_host: 'imap.mail.me.com',      imap_port: 993, smtp_host: 'smtp.mail.me.com',      smtp_port: 587 },
-  custom:  { label: 'Custom' },
-};
-
 // ─── Account Form (Add or Edit) ───────────────────────────────────────────────
 function isMicrosoftImapHost(host) {
   const h = (host || '').toLowerCase();
@@ -133,8 +126,7 @@ function AccountForm({ initial, onSave, onCancel }) {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const handlePreset = (key) => {
-    const p = PRESETS[key];
-    if (p.imap_host) setForm(f => ({ ...f, ...p, label: undefined }));
+    setForm(f => applyMailPreset(f, key));
     setSelectedPreset(key);
   };
 
@@ -162,9 +154,9 @@ function AccountForm({ initial, onSave, onCancel }) {
       {/* Presets (add only) */}
       {!isEdit && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-          {Object.entries(PRESETS).map(([key]) => {
+          {Object.entries(PRESETS).map(([key, preset]) => {
             const active = selectedPreset === key;
-            const presetLabel = key === 'gmail' ? t('admin.accounts.presetGmail') : key === 'yahoo' ? t('admin.accounts.presetYahoo') : key === 'icloud' ? t('admin.accounts.presetIcloud') : t('admin.accounts.presetCustom');
+            const presetLabel = key === 'gmail' ? t('admin.accounts.presetGmail') : key === 'yahoo' ? t('admin.accounts.presetYahoo') : key === 'icloud' ? t('admin.accounts.presetIcloud') : key === 'custom' ? t('admin.accounts.presetCustom') : preset.label;
             return (
               <button key={key} onClick={() => handlePreset(key)} style={{
                 padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
@@ -177,6 +169,16 @@ function AccountForm({ initial, onSave, onCancel }) {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {!isEdit && selectedPreset && (
+        <div role="note" style={{ padding: '12px 14px', marginBottom: 18, borderRadius: 8,
+          background: 'var(--accent-dim)', color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.7 }}>
+          {selectedPreset === 'qq' || selectedPreset.startsWith('netease') ? t('admin.accounts.authorizationCodeHint')
+            : selectedPreset === 'exmail' ? t('admin.accounts.enterpriseHint')
+            : selectedPreset === 'custom' ? t('admin.accounts.customConnectionHint')
+            : t('admin.accounts.appPasswordHint')}
         </div>
       )}
 
@@ -210,8 +212,13 @@ function AccountForm({ initial, onSave, onCancel }) {
 
       {!isEdit && (
         <Field label={t('admin.accounts.email')} required>
-          <input value={form.email_address || ''} onChange={e => set('email_address', e.target.value)}
+          <input value={form.email_address || ''} onChange={e => setForm(f => updateAccountEmail(f, e.target.value))}
             placeholder={t('admin.accounts.emailPh')} style={inputStyle}
+            onBlurCapture={() => {
+              if (selectedPreset) return;
+              const key = detectMailPreset(form.email_address);
+              if (key) handlePreset(key);
+            }}
             onFocus={e => e.target.style.borderColor = 'var(--accent)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'} />
         </Field>

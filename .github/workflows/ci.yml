@@ -10,6 +10,20 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mailflow_test
+          POSTGRES_USER: mailflow_test
+          POSTGRES_PASSWORD: ci_ephemeral_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mailflow_test -d mailflow_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6
@@ -38,6 +52,8 @@ jobs:
 
       - name: Test
         working-directory: backend
+        env:
+          MAILFLOW_TEST_DATABASE_URL: postgresql://mailflow_test:ci_ephemeral_only@localhost:5432/mailflow_test
         run: npm test
 
       - name: Audit
@@ -67,11 +83,19 @@ jobs:
 
       - name: Build
         working-directory: frontend
+        env:
+          VITE_DEFAULT_LANGUAGE: zhCN
+          VITE_DEFAULT_THEME: light
         run: npm run build
 
       - name: Test
         working-directory: frontend
         run: npm test
+
+      - name: Team deployment configuration tests
+        run: |
+          node --test deploy/configure.test.mjs
+          bash -n deploy/first-run.sh
 
       - name: Audit
         working-directory: frontend

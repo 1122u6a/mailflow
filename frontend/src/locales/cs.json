@@ -1126,7 +1126,11 @@
       "trustedAuthservDetected": "Viděno ve vašich nedávných zprávách (kliknutím použijete):",
       "trustedAuthservDetectedNone": "Zatím žádná data — zprávy se kontrolují, jakmile je pro tento účet zapnutý antispam.",
       "trustedAuthservWarn": "Důvěřujte pouze ID, které znáte jako přijímající server vašeho poskytovatele.",
-      "enabledGlobally": "Globálně zapnuto"
+      "enabledGlobally": "Globálně zapnuto",
+      "authorizationCodeHint": "Nejprve ve webmailu zapněte IMAP/SMTP a poté zadejte autorizační kód klienta, nikoli heslo k webmailu.",
+      "enterpriseHint": "Ověřte u firemního správce, že je IMAP/SMTP zapnuto. Použijte heslo klienta nebo autorizační kód požadovaný vaší organizací.",
+      "appPasswordHint": "V bezpečnostním nastavení e-mailového účtu vytvořte heslo aplikace a zadejte ho zde. Zásady účtu mohou přístup omezovat.",
+      "customConnectionHint": "Zadejte nastavení IMAP a SMTP od poskytovatele. Pro Outlook nebo Microsoft 365 použijte připojení Microsoft."
     },
     "folderMappings": {
       "title": "Mapování složek",

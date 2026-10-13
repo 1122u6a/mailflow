@@ -874,7 +874,11 @@
       "trustedAuthservDetected": "In Ihren letzten Nachrichten gesehen (zum Übernehmen klicken):",
       "trustedAuthservDetectedNone": "Noch keine Daten — Nachrichten werden geprüft, sobald Antispam für dieses Konto aktiv ist.",
       "trustedAuthservWarn": "Vertrauen Sie nur einer ID, die Sie als empfangenden Server Ihres Anbieters erkennen.",
-      "enabledGlobally": "Global aktiviert"
+      "enabledGlobally": "Global aktiviert",
+      "authorizationCodeHint": "Aktiviere zuerst IMAP/SMTP im Webmail und gib hier den Client-Autorisierungscode statt deines Webmail-Passworts ein.",
+      "enterpriseHint": "Bitte die Firmenadministration, IMAP/SMTP zu aktivieren. Verwende das von deiner Organisation verlangte Client-Passwort oder den Autorisierungscode.",
+      "appPasswordHint": "Erstelle in den Sicherheitseinstellungen deines E-Mail-Kontos ein App-Passwort und gib es hier ein. Kontorichtlinien können den Zugriff einschränken.",
+      "customConnectionHint": "Gib die IMAP- und SMTP-Einstellungen deines Anbieters ein. Nutze für Outlook oder Microsoft 365 die Microsoft-Verbindungsoption."
     },
     "folderMappings": {
       "title": "Ordnerzuordnungen",

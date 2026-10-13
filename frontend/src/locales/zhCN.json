@@ -947,7 +947,11 @@
       "trustedAuthservDetected": "在您最近的邮件中出现过（点击使用）：",
       "trustedAuthservDetectedNone": "暂无数据——为该账户启用反垃圾邮件后才会分析邮件。",
       "trustedAuthservWarn": "只信任您确认为邮件服务商接收服务器的 ID。",
-      "enabledGlobally": "已全局启用"
+      "enabledGlobally": "已全局启用",
+      "authorizationCodeHint": "先在邮箱网页版开启 IMAP/SMTP 服务，再填写客户端授权码，而不是邮箱登录密码。",
+      "enterpriseHint": "请先向公司管理员确认 IMAP/SMTP 已开启，填写企业要求的客户端密码或授权码。",
+      "appPasswordHint": "先在邮箱账号的安全设置中生成应用专用密码，再填写到这里；能否接入还取决于账号策略。",
+      "customConnectionHint": "请填写邮箱服务商提供的 IMAP/SMTP 参数。Outlook 或 Microsoft 365 请使用微软专用连接入口。"
     },
     "folderMappings": {
       "title": "文件夹映射",

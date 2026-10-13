@@ -947,7 +947,11 @@
       "trustedAuthservDetected": "Seen on your recent mail (click to use):",
       "trustedAuthservDetectedNone": "No data yet — messages are inspected once antispam is enabled for this account.",
       "trustedAuthservWarn": "Only trust an ID you recognize as your mail provider's receiving server.",
-      "enabledGlobally": "Enabled globally"
+      "enabledGlobally": "Enabled globally",
+      "authorizationCodeHint": "Enable IMAP/SMTP in your webmail first, then enter the client authorization code here, not your webmail password.",
+      "enterpriseHint": "Enable IMAP/SMTP with your company administrator. Use the client password or authorization code required by your organization.",
+      "appPasswordHint": "Create an app-specific password in your email account security settings, then enter it here. Account policies may restrict third-party access.",
+      "customConnectionHint": "Enter the IMAP and SMTP settings supplied by your provider. Use the Microsoft connection option for Outlook or Microsoft 365."
     },
     "folderMappings": {
       "title": "Folder mappings",
