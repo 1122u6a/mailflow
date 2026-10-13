@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { remoteLoadsCsp } from './remoteImagePolicy.js';
 
 // Print documents for one message or a whole conversation (#521).
 //
@@ -12,7 +13,11 @@ const parseList = (raw) => {
 };
 const fmtAddr = (r) => r.name ? `${esc(r.name)} &lt;${esc(r.email)}&gt;` : esc(r.email);
 
-const HEAD = (title) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; base-uri 'none'"><title>${esc(title)}</title>`;
+// `remoteBlocked`: a printed body was served with remote images blocked, so the print window
+// forbids remote loads as the email frame does (utils/remoteImagePolicy.js). Any one of a
+// conversation's messages is enough: a message from an allowed sender then prints without its
+// remote images, rather than a blocked one loading them.
+const HEAD = (title, remoteBlocked = false) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; base-uri 'none';${remoteLoadsCsp(remoteBlocked)}"><title>${esc(title)}</title>`;
 
 function metaHtml(message) {
   const date = message.date ? new Date(message.date).toLocaleString() : '';
@@ -41,6 +46,7 @@ function bodyHtml(body) {
 // conversation under the first message's subject, each with its own sender, recipients and date.
 export function buildPrintDocument(entries) {
   const first = entries[0]?.message || {};
+  const remoteBlocked = entries.some(e => e.body?.remoteImagesBlocked);
   const subject = esc(first.subject) || '(no subject)';
   const style = `<style>
   body { font-family: Arial, sans-serif; font-size: 14px; color: #111; margin: 32px; }
@@ -53,7 +59,7 @@ export function buildPrintDocument(entries) {
   @media print { body { margin: 16px; } }
 </style></head><body>`;
   if (entries.length === 1) {
-    return `${HEAD(first.subject)}
+    return `${HEAD(first.subject, remoteBlocked)}
 ${style}
 <div class="header">
   <h1>${subject}</h1>
@@ -62,7 +68,7 @@ ${style}
 ${bodyHtml(entries[0].body)}
 </body></html>`;
   }
-  return `${HEAD(first.subject)}
+  return `${HEAD(first.subject, remoteBlocked)}
 ${style}
 <div class="header"><h1>${subject}</h1></div>
 ${entries.map(({ message, body }) => `<div class="message">

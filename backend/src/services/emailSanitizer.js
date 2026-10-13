@@ -704,24 +704,40 @@ export function sanitizeSignature(html) {
   });
 }
 
-// Returns true if the sanitized HTML contains any remote http/https image references,
-// including CSS @import with a bare quoted URL (not wrapped in url()) which bypasses
-// the url() pattern check but still causes an outbound stylesheet request.
+// Remote here means http(s) or protocol-relative ("//host/...", which the email frame resolves to
+// https); browsers ignore leading whitespace in a URL, so the patterns below do too.
+
+// Remote loads in CSS text made inert: url(...) and quoted URLs in image-set() become data:,
+// (which draws nothing) and remote @imports are dropped. url(data:,) carries no quotes, so it is
+// safe inside any attribute or style block.
+function blockCssUrls(css) {
+  return css
+    .replace(/@import\s+(?:url\(\s*)?(["']?)\s*(?:https?:)?\/\/[^"')]*\1\s*\)?[^;{}]*;?/gi, '')
+    .replace(/url\(\s*(?:"\s*(?:https?:)?\/\/[^"]*"|'\s*(?:https?:)?\/\/[^']*'|(?:https?:)?\/\/[^"')\s]*)\s*\)/gi, 'url(data:,)')
+    .replace(/((?:-webkit-)?image-set\()([^)]*)\)/gi, (_, open, inner) =>
+      `${open}${inner.replace(/(["'])\s*(?:https?:)?\/\/[^"']*\1/gi, '"data:,"')})`);
+}
+
+// An attribute value as written in the HTML, and back. Sanitized HTML writes values in double
+// quotes with " as &quot; and & as &amp;; a CSS URL quoted with " is only visible once decoded.
+const decodeAttr = (v) => v.replace(/&quot;|&#0*34;|&#x0*22;/gi, '"').replace(/&#0*39;|&#x0*27;|&apos;/gi, "'").replace(/&amp;/gi, '&');
+const encodeAttr = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+
+// Whether the HTML loads anything remote that blockRemoteImages would stop: exactly when blocking
+// would change it, so the two can never disagree.
 export function hasRemoteImages(html) {
   if (!html) return false;
-  return (
-    /<img\b[^>]*\ssrc=["']https?:\/\//i.test(html) ||
-    /<img\b[^>]*\ssrcset=["'][^"']*https?:\/\//i.test(html) ||
-    /\sbackground=["']https?:\/\//i.test(html) ||
-    /url\(\s*['"]?https?:\/\//i.test(html) ||
-    /@import\s+["']https?:\/\//i.test(html)
-  );
+  return blockRemoteImages(html) !== html;
 }
 
 // Rewrite remote http/https image references so the browser makes no network requests.
 // data: and cid: sources are always left intact.
 // Never call this on HTML that will be written back to the database — apply only at
 // response time so the canonical cached body remains unmodified.
+//
+// This is the first line only: the email frame also forbids remote images, fonts and media in its
+// Content-Security-Policy whenever a body is served blocked (remoteImagesBlocked), which stops what
+// no pattern here can foresee (CSS escapes, for one).
 export function blockRemoteImages(html) {
   if (!html) return html;
 
@@ -731,7 +747,7 @@ export function blockRemoteImages(html) {
   // making the entire email appear blank.  Reading the explicit width/height attributes
   // lets us generate a grey rectangle that matches the layout slot the author intended.
   let out = html.replace(
-    /(<img\b[^>]*?)\ssrc=(["'])(https?:\/\/[^\s"']*)\2/gi,
+    /(<img\b[^>]*?)\ssrc=(["'])(\s*(?:https?:)?\/\/[^"']*)\2/gi,
     (match, pre) => {
       const wMatch = pre.match(/\bwidth=["']?(\d+)["']?/i);
       const hMatch = pre.match(/\bheight=["']?(\d+)["']?/i);
@@ -748,40 +764,31 @@ export function blockRemoteImages(html) {
   out = out.replace(
     /(<img\b[^>]*?)\ssrcset=(["'])([^"']*)\2/gi,
     (_, pre, q, val) =>
-      /https?:\/\//i.test(val)
+      /(?:^|[\s,])(?:https?:)?\/\//i.test(val)
         ? pre
         : `${pre} srcset=${q}${val}${q}`
   );
 
   // Blank background="https://..." attribute (table-based marketing email layouts).
   out = out.replace(
-    /(\s)background=(["'])(https?:\/\/[^\s"']*)\2/gi,
+    /(\s)background=(["'])(\s*(?:https?:)?\/\/[^"']*)\2/gi,
     '$1background=$2$2'
   );
 
-  // Block CSS url(https://...) in inline style= attributes.
+  // Block CSS url(https://...) in inline style= attributes, read as the browser will read them.
+  // Left byte for byte as it was when there is nothing to block.
   out = out.replace(
-    /\sstyle="([^"]*)"/gi,
-    (_, styleVal) => {
-      const blocked = styleVal.replace(
-        /url\(\s*(['"]?)https?:\/\/[^'")]+\1\s*\)/gi,
-        'url("data:,")'
-      );
-      return ` style="${blocked}"`;
+    /(\sstyle=)(?:"([^"]*)"|'([^']*)')/gi,
+    (match, attr, doubleQuoted, singleQuoted) => {
+      const css = decodeAttr(doubleQuoted ?? singleQuoted);
+      const blocked = blockCssUrls(css);
+      return blocked === css ? match : `${attr}"${encodeAttr(blocked)}"`;
     }
   );
 
-  // Block remote CSS loads inside <style> blocks:
-  // 1. Strip @import "https://..." (bare quoted form — not caught by url() pattern).
-  // 2. Strip @import url(https://...) (url() form).
-  // 3. Replace remaining url(https://...) CSS property values with data:,.
-  out = scanPaired(out, /<style\b/gi, '</style>', (open, content, close) => {
-    const blocked = content
-      .replace(/@import\s+["']https?:\/\/[^"']*["']\s*;?/gi, '')
-      .replace(/@import\s+url\(\s*["']?https?:\/\/[^"')]*["']?\s*\)\s*;?/gi, '')
-      .replace(/url\(\s*(['"]?)https?:\/\/[^'")]+\1\s*\)/gi, 'url("data:,")');
-    return open + blocked + close;
-  });
+  // Block remote CSS loads inside <style> blocks: remote @imports dropped, url(...) and
+  // image-set() URLs made inert.
+  out = scanPaired(out, /<style\b/gi, '</style>', (open, content, close) => open + blockCssUrls(content) + close);
 
   return out;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { measureContentHeight, createHeightController, forceEagerImages } from '../utils/emailFrameHeight.js';
 import { forwardIframeKeydown } from '../utils/iframeKeys.js';
+import { remoteLoadsCsp } from '../utils/remoteImagePolicy.js';
 
 // The email body, rendered in its own sandboxed frame.
 //
@@ -320,7 +321,7 @@ function MessageBodyView({ body, messageId, emailScaleRef, hasNativeContextTarge
       srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <meta name="color-scheme" content="only light">
-      <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; style-src 'unsafe-inline';">
+      <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; style-src 'unsafe-inline';${remoteLoadsCsp(body.remoteImagesBlocked)}">
       <base target="_blank">
     </head><body><div id="mf-scale-wrapper">${
       body.html.replace(/<a(\s)/gi, '<a rel="noopener noreferrer"$1')

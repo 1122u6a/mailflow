@@ -506,7 +506,7 @@ describe('blockRemoteImages', () => {
   it('blocks url() in inline style attributes', () => {
     const out = blockRemoteImages('<div style="background:url(https://example.com/bg.jpg)">');
     expect(out).not.toContain('example.com');
-    expect(out).toContain('url("data:,")');
+    expect(out).toContain('url(data:,)');
   });
 
   it('strips @import in <style> blocks', () => {
@@ -518,7 +518,7 @@ describe('blockRemoteImages', () => {
   it('replaces url() in <style> blocks with data:,', () => {
     const out = blockRemoteImages('<style>div{background:url(https://example.com/bg.jpg)}</style>');
     expect(out).not.toContain('example.com');
-    expect(out).toContain('url("data:,")');
+    expect(out).toContain('url(data:,)');
   });
 
   it('leaves cid: images intact', () => {
@@ -534,6 +534,79 @@ describe('blockRemoteImages', () => {
   it('returns null/undefined unchanged', () => {
     expect(blockRemoteImages(null)).toBeNull();
     expect(blockRemoteImages(undefined)).toBeUndefined();
+  });
+
+  // Protocol-relative URLs ("//host/x"): the email frame resolves them to https, so they load like
+  // any remote URL and must be blocked like one. They used to slip through every rule.
+  it.each([
+    ['img src', '<img src="//tracker.example/p.gif" width="1" height="1">'],
+    ['img src with leading space', '<img src=" //tracker.example/p.gif">'],
+    ['srcset', '<img src="data:," srcset="//tracker.example/b.png 2x">'],
+    ['background attribute', '<table background="//tracker.example/bg.png"><tr><td>x</td></tr></table>'],
+    ['inline style', '<div style="background:url(//tracker.example/i.png)">x</div>'],
+    ['style block', '<style>.h{background:url(//tracker.example/s.png)}</style>'],
+    ['style block @import', '<style>@import url(//tracker.example/s.css); p{}</style>'],
+  ])('blocks a protocol-relative URL in %s', (_, html) => {
+    expect(blockRemoteImages(html)).not.toContain('tracker.example');
+  });
+
+  // Sanitized HTML writes a double quote inside an attribute as &quot;, so a URL the email quoted
+  // with " was not recognized in an inline style and loaded anyway.
+  it('blocks an inline style URL quoted with &quot;', () => {
+    const out = blockRemoteImages('<div style="background-image:url(&quot;https://tracker.example/h.png&quot;);background-color:#ffffff">x</div>');
+    expect(out).not.toContain('tracker.example');
+    expect(out).toBe('<div style="background-image:url(data:,);background-color:#ffffff">x</div>');
+  });
+
+  it('blocks a quoted URL that contains parentheses', () => {
+    const out = blockRemoteImages('<style>.h{background:url("https://tracker.example/a(1).png")}</style>');
+    expect(out).toBe('<style>.h{background:url(data:,)}</style>');
+  });
+
+  it('blocks URLs in image-set()', () => {
+    const out = blockRemoteImages('<div style="background-image:image-set(&quot;https://tracker.example/a.png&quot; 1x, url(https://tracker.example/b.png) 2x)">x</div>');
+    expect(out).not.toContain('tracker.example');
+  });
+
+  // The replacement used to be url("data:,"), whose quotes ended the double-quoted style attribute:
+  // everything after a blocked background image (its color, the text color, padding) was lost.
+  it.each([
+    ['unquoted', 'url(https://example.com/h.png)'],
+    ['single-quoted', "url('https://example.com/h.png')"],
+    ['double-quoted', 'url(&quot;https://example.com/h.png&quot;)'],
+  ])('keeps the rest of an inline style after a blocked %s URL', (_, url) => {
+    const out = blockRemoteImages(`<div style="background-image:${url};background-color:#ffffff;color:#222222;padding:40px">A</div>`);
+    expect(out).toBe('<div style="background-image:url(data:,);background-color:#ffffff;color:#222222;padding:40px">A</div>');
+  });
+
+  it('keeps a single-quoted style attribute well formed', () => {
+    const out = blockRemoteImages(`<div style='background:url("https://example.com/h.png");color:red'>x</div>`);
+    expect(out).toBe('<div style="background:url(data:,);color:red">x</div>');
+  });
+
+  it('leaves a style with nothing remote exactly as it was', () => {
+    const html = '<div style="font-family:&quot;Helvetica Neue&quot;, Arial;background:url(data:image/png;base64,AAAA)">x</div>';
+    expect(blockRemoteImages(html)).toBe(html);
+  });
+
+  it('leaves relative and same-page URLs alone', () => {
+    const html = '<div style="background:url(/local.png)"><a href="#top">x</a></div><style>p{background:url(img/a.png)}</style>';
+    expect(blockRemoteImages(html)).toBe(html);
+  });
+});
+
+// Detection is defined as "blocking would change something", so the two cannot disagree: a body
+// that needs blocking is always detected, and the blocked-images notice always shows for it.
+describe('hasRemoteImages and blockRemoteImages agree', () => {
+  it.each([
+    '<img src="//tracker.example/p.gif">',
+    '<table background="//tracker.example/bg.png">',
+    '<div style="background:url(&quot;https://tracker.example/h.png&quot;)">x</div>',
+    '<div style="background-image:image-set(&quot;https://tracker.example/a.png&quot; 1x)">x</div>',
+    '<style>.h{background:url(//tracker.example/s.png)}</style>',
+  ])('detects %s', (html) => {
+    expect(hasRemoteImages(html)).toBe(true);
+    expect(hasRemoteImages(blockRemoteImages(html))).toBe(false);
   });
 });
 
